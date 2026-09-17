@@ -5,7 +5,7 @@
 			"ubus": {
 				"college.wifi": [
 					"get_dashboard_stats",
-					"list_students",
+					"get_students",
 					"get_student",
 					"list_devices",
 					"get_device",
@@ -14,63 +14,65 @@
 					"get_active_sessions"
 				]
 			},
-			"uci": [
-				"college-wifi"
-			],
+			"uci": [ "college-wifi" ],
 			"file": {
-				"/etc/college-wifi/students.json": [ "read" ],
-				"/etc/college-wifi/devices.json": [ "read" ],
-				"/etc/college-wifi/sessions.json": [ "read" ],
-				"/etc/college-wifi/usage.json": [ "read" ]
+				"/etc/college-wifi/students.json":       [ "read" ],
+				"/etc/college-wifi/security_events.json": [ "read" ],
+				"/etc/college-wifi/devices.json":         [ "read" ],
+				"/etc/college-wifi/sessions.json":        [ "read" ]
 			}
 		},
 		"write": {
 			"ubus": {
 				"college.wifi": [
-					"create_student",
+					"add_student",
 					"update_student",
 					"delete_student",
-					"set_quota",
-					"reset_quota",
 					"block_student",
 					"unblock_student",
+					"reset_quota",
 					"block_device",
 					"unblock_device"
 				]
 			},
-			"uci": [
-				"college-wifi"
-			],
+			"uci": [ "college-wifi" ],
 			"file": {
-				"/etc/college-wifi/students.json": [ "write" ],
-				"/etc/college-wifi/devices.json": [ "write" ],
-				"/etc/college-wifi/sessions.json": [ "write" ],
-				"/etc/college-wifi/usage.json": [ "write" ]
+				"/etc/college-wifi/students.json":       [ "write" ],
+				"/etc/college-wifi/security_events.json": [ "write" ],
+				"/etc/college-wifi/devices.json":         [ "write" ],
+				"/etc/college-wifi/sessions.json":        [ "write" ]
 			}
 		}
 	},
 
 	"luci-app-college-wifi-netadmin": {
-		"description": "Network administrator access to College WiFi (monitoring only)",
+		"description": "Network administrator — read monitoring, limited write",
 		"read": {
 			"ubus": {
 				"college.wifi": [
 					"get_dashboard_stats",
-					"list_students",
+					"get_students",
 					"list_devices",
 					"get_device",
 					"get_usage_stats",
-					"get_active_sessions"
+					"get_active_sessions",
+					"get_security_events"
 				]
 			},
-			"uci": [
-				"college-wifi"
-			]
+			"uci": [ "college-wifi" ]
+		},
+		"write": {
+			"ubus": {
+				"college.wifi": [
+					"block_device",
+					"unblock_device"
+				]
+			}
 		}
 	},
 
 	"luci-app-college-wifi-student": {
-		"description": "Student portal access (view own data only)",
+		"description": "Student portal access — personal data only",
 		"read": {
 			"ubus": {
 				"college.wifi": [

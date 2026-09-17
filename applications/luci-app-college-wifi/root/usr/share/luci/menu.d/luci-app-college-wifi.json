@@ -29,6 +29,18 @@
 		}
 	},
 
+	"admin/college-wifi/student-profile": {
+		"title": "Student Profile",
+		"order": 21,
+		"action": {
+			"type": "view",
+			"path": "college-wifi/student-profile"
+		},
+		"depends": {
+			"acl": [ "luci-app-college-wifi" ]
+		}
+	},
+
 	"admin/college-wifi/devices": {
 		"title": "Devices",
 		"order": 30,

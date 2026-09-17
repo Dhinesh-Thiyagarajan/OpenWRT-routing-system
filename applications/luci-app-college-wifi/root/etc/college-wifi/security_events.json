@@ -1,0 +1,102 @@
+[
+  {
+    "id": "evt-0001",
+    "timestamp": "2026-09-17T11:05:00Z",
+    "severity": "warn",
+    "event_type": "unauthorized_device",
+    "actor": "",
+    "details": "Unknown MAC attempting portal access",
+    "ip": "",
+    "mac": "ff:ee:12:34:56:78"
+  },
+  {
+    "id": "evt-0002",
+    "timestamp": "2026-09-17T10:30:00Z",
+    "severity": "info",
+    "event_type": "login_success",
+    "actor": "ENG23CS001",
+    "details": "Arun Kumar authenticated via portal",
+    "ip": "192.168.1.101",
+    "mac": "a4:c3:f0:12:34:56"
+  },
+  {
+    "id": "evt-0003",
+    "timestamp": "2026-09-17T10:02:00Z",
+    "severity": "critical",
+    "event_type": "quota_exceeded",
+    "actor": "ENG23CS008",
+    "details": "Vikram Bose quota exhausted (1024 MB used). Internet blocked.",
+    "ip": "192.168.1.131",
+    "mac": "aa:bb:cc:dd:ee:08"
+  },
+  {
+    "id": "evt-0004",
+    "timestamp": "2026-09-17T09:55:00Z",
+    "severity": "warn",
+    "event_type": "login_failed",
+    "actor": "unknown",
+    "details": "Wrong phone number supplied for College ID ENG23CS010",
+    "ip": "192.168.1.145",
+    "mac": ""
+  },
+  {
+    "id": "evt-0005",
+    "timestamp": "2026-09-17T09:48:00Z",
+    "severity": "warn",
+    "event_type": "login_failed",
+    "actor": "unknown",
+    "details": "College ID ENG23XX999 does not exist in database",
+    "ip": "192.168.1.172",
+    "mac": ""
+  },
+  {
+    "id": "evt-0006",
+    "timestamp": "2026-09-17T09:40:00Z",
+    "severity": "info",
+    "event_type": "admin_action",
+    "actor": "admin",
+    "details": "Quota reset for ENG23CS012 to 1073741824 bytes",
+    "ip": "",
+    "mac": ""
+  },
+  {
+    "id": "evt-0007",
+    "timestamp": "2026-09-17T09:30:00Z",
+    "severity": "critical",
+    "event_type": "quota_exceeded",
+    "actor": "ENG23CS012",
+    "details": "Meera Iyer quota exhausted (1024 MB used). Internet blocked.",
+    "ip": "192.168.1.143",
+    "mac": "33:44:55:66:77:12"
+  },
+  {
+    "id": "evt-0008",
+    "timestamp": "2026-09-17T09:15:00Z",
+    "severity": "info",
+    "event_type": "login_success",
+    "actor": "ENG23CS004",
+    "details": "Sneha Nair authenticated via portal",
+    "ip": "192.168.1.122",
+    "mac": "d2:bc:a1:77:88:99"
+  },
+  {
+    "id": "evt-0009",
+    "timestamp": "2026-09-17T09:00:00Z",
+    "severity": "info",
+    "event_type": "system_start",
+    "actor": "system",
+    "details": "College WiFi management service started",
+    "ip": "",
+    "mac": ""
+  },
+  {
+    "id": "evt-0010",
+    "timestamp": "2026-09-17T08:55:00Z",
+    "severity": "warn",
+    "event_type": "login_failed",
+    "actor": "unknown",
+    "details": "College ID field empty in portal request",
+    "ip": "192.168.1.200",
+    "mac": ""
+  }
+]
