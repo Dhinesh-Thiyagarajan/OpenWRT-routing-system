@@ -1,0 +1,45 @@
+#!/bin/sh
+# College WiFi Management System - UCI Defaults
+# Initializes configuration on first installation
+
+# Create default UCI configuration
+uci -q batch <<-EOF
+	delete college-wifi.settings
+	set college-wifi.settings=settings
+	set college-wifi.settings.default_quota='1024'
+	set college-wifi.settings.quota_unit='MB'
+	set college-wifi.settings.portal_enabled='1'
+	set college-wifi.settings.portal_url='http://192.168.1.1/portal'
+	set college-wifi.settings.session_timeout='86400'
+	set college-wifi.settings.check_interval='300'
+	commit college-wifi
+EOF
+
+# Create data directory
+mkdir -p /etc/college-wifi
+chmod 700 /etc/college-wifi
+
+# Create empty JSON databases if they don't exist
+[ ! -f /etc/college-wifi/students.json ] && cat > /etc/college-wifi/students.json <<-'EOJSON'
+[]
+EOJSON
+
+[ ! -f /etc/college-wifi/devices.json ] && cat > /etc/college-wifi/devices.json <<-'EOJSON'
+[]
+EOJSON
+
+[ ! -f /etc/college-wifi/sessions.json ] && cat > /etc/college-wifi/sessions.json <<-'EOJSON'
+[]
+EOJSON
+
+[ ! -f /etc/college-wifi/usage.json ] && cat > /etc/college-wifi/usage.json <<-'EOJSON'
+[]
+EOJSON
+
+# Set proper permissions
+chmod 600 /etc/college-wifi/*.json
+
+# Log installation
+logger -t college-wifi "College WiFi Management System initialized"
+
+exit 0

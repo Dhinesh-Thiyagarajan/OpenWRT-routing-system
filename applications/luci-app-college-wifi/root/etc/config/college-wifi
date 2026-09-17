@@ -1,0 +1,8 @@
+
+config settings 'settings'
+	option default_quota '1024'
+	option quota_unit 'MB'
+	option portal_enabled '1'
+	option portal_url 'http://192.168.1.1/portal'
+	option session_timeout '86400'
+	option check_interval '300'

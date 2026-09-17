@@ -1,0 +1,74 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "College WiFi"
+msgstr ""
+
+msgid "Dashboard"
+msgstr ""
+
+msgid "Students"
+msgstr ""
+
+msgid "Devices"
+msgstr ""
+
+msgid "Data Usage"
+msgstr ""
+
+msgid "Security"
+msgstr ""
+
+msgid "College WiFi Management Dashboard"
+msgstr ""
+
+msgid "Total Students"
+msgstr ""
+
+msgid "Active Students"
+msgstr ""
+
+msgid "Connected Devices"
+msgstr ""
+
+msgid "Total Data Usage"
+msgstr ""
+
+msgid "Blocked Students"
+msgstr ""
+
+msgid "Network Status"
+msgstr ""
+
+msgid "Data Usage Today"
+msgstr ""
+
+msgid "Recent Student Logins"
+msgstr ""
+
+msgid "Security Overview"
+msgstr ""
+
+msgid "Quick Actions"
+msgstr ""
+
+msgid "Manage Students"
+msgstr ""
+
+msgid "View Devices"
+msgstr ""
+
+msgid "Security Logs"
+msgstr ""
+
+msgid "Student Management"
+msgstr ""
+
+msgid "Device Management"
+msgstr ""
+
+msgid "Data Usage & Quota Management"
+msgstr ""
+
+msgid "Security & Logging"
+msgstr ""
