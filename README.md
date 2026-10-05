@@ -1037,14 +1037,4 @@ Once that milestone is stable, additional project features can be developed inde
 
 ---
 
-## License
 
-Add the project's applicable license here before publishing the repository.
-
-## Authors
-
-Add project contributors here.
-
-## Acknowledgements
-
-This project builds on the OpenWrt, LuCI, and openNDS ecosystems.
