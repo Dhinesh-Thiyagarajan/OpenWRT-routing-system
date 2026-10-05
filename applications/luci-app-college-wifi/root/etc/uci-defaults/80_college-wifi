@@ -1,8 +1,9 @@
 #!/bin/sh
 # College WiFi Management System - UCI Defaults
-# Initializes configuration on first installation
+# Phase 4: Adds session-timeout, portal config, openNDS integration keys
+# Runs once on first installation; safe to re-run (idempotent).
 
-# Create default UCI configuration
+# ── UCI configuration ─────────────────────────────────────────────────────
 uci -q batch <<-EOF
 	delete college-wifi.settings
 	set college-wifi.settings=settings
@@ -12,34 +13,37 @@ uci -q batch <<-EOF
 	set college-wifi.settings.portal_url='http://192.168.1.1/portal'
 	set college-wifi.settings.session_timeout='86400'
 	set college-wifi.settings.check_interval='300'
+	set college-wifi.settings.max_failed_attempts='5'
+	set college-wifi.settings.lockout_window='900'
+	set college-wifi.settings.opennds_enabled='0'
+	set college-wifi.settings.opennds_fasport='2080'
+	set college-wifi.settings.opennds_faspath='/cw-auth/portal.sh'
+	set college-wifi.settings.opennds_faskey='CHANGE_THIS_IN_PRODUCTION'
 	commit college-wifi
 EOF
 
-# Create data directory
+# ── Data directory ────────────────────────────────────────────────────────
 mkdir -p /etc/college-wifi
 chmod 700 /etc/college-wifi
 
-# Create empty JSON databases if they don't exist
-[ ! -f /etc/college-wifi/students.json ] && cat > /etc/college-wifi/students.json <<-'EOJSON'
-[]
-EOJSON
+# ── JSON database initialisation (only if files don't exist yet) ──────────
+[ ! -f /etc/college-wifi/students.json ]      && echo '[]' > /etc/college-wifi/students.json
+[ ! -f /etc/college-wifi/devices.json ]       && echo '[]' > /etc/college-wifi/devices.json
+[ ! -f /etc/college-wifi/sessions.json ]      && echo '[]' > /etc/college-wifi/sessions.json
+[ ! -f /etc/college-wifi/usage.json ]         && echo '[]' > /etc/college-wifi/usage.json
+[ ! -f /etc/college-wifi/security_events.json ] && echo '[]' > /etc/college-wifi/security_events.json
+[ ! -f /etc/college-wifi/failed_auth.json ]   && echo '{}' > /etc/college-wifi/failed_auth.json
 
-[ ! -f /etc/college-wifi/devices.json ] && cat > /etc/college-wifi/devices.json <<-'EOJSON'
-[]
-EOJSON
-
-[ ! -f /etc/college-wifi/sessions.json ] && cat > /etc/college-wifi/sessions.json <<-'EOJSON'
-[]
-EOJSON
-
-[ ! -f /etc/college-wifi/usage.json ] && cat > /etc/college-wifi/usage.json <<-'EOJSON'
-[]
-EOJSON
-
-# Set proper permissions
 chmod 600 /etc/college-wifi/*.json
 
-# Log installation
-logger -t college-wifi "College WiFi Management System initialized"
+# ── Portal web directory ──────────────────────────────────────────────────
+mkdir -p /www/portal
+chmod 755 /www/portal
+
+# ── FAS handler directory ─────────────────────────────────────────────────
+mkdir -p /usr/lib/college-wifi
+chmod 755 /usr/lib/college-wifi
+
+logger -t college-wifi "College WiFi Management System (Phase 4) initialized"
 
 exit 0

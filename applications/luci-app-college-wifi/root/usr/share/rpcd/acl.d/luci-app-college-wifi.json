@@ -7,19 +7,22 @@
 					"get_dashboard_stats",
 					"get_students",
 					"get_student",
+					"get_active_sessions",
+					"get_session",
+					"validate_session",
 					"list_devices",
 					"get_device",
 					"get_usage_stats",
-					"get_security_events",
-					"get_active_sessions"
+					"get_security_events"
 				]
 			},
 			"uci": [ "college-wifi" ],
 			"file": {
-				"/etc/college-wifi/students.json":       [ "read" ],
+				"/etc/college-wifi/students.json":        [ "read" ],
+				"/etc/college-wifi/sessions.json":        [ "read" ],
 				"/etc/college-wifi/security_events.json": [ "read" ],
 				"/etc/college-wifi/devices.json":         [ "read" ],
-				"/etc/college-wifi/sessions.json":        [ "read" ]
+				"/etc/college-wifi/failed_auth.json":     [ "read" ]
 			}
 		},
 		"write": {
@@ -31,31 +34,37 @@
 					"block_student",
 					"unblock_student",
 					"reset_quota",
+					"authenticate_student",
+					"create_session",
+					"logout_student",
 					"block_device",
 					"unblock_device"
 				]
 			},
 			"uci": [ "college-wifi" ],
 			"file": {
-				"/etc/college-wifi/students.json":       [ "write" ],
+				"/etc/college-wifi/students.json":        [ "write" ],
+				"/etc/college-wifi/sessions.json":        [ "write" ],
 				"/etc/college-wifi/security_events.json": [ "write" ],
 				"/etc/college-wifi/devices.json":         [ "write" ],
-				"/etc/college-wifi/sessions.json":        [ "write" ]
+				"/etc/college-wifi/failed_auth.json":     [ "write" ]
 			}
 		}
 	},
 
 	"luci-app-college-wifi-netadmin": {
-		"description": "Network administrator — read monitoring, limited write",
+		"description": "Network administrator — read monitoring, session view, limited write",
 		"read": {
 			"ubus": {
 				"college.wifi": [
 					"get_dashboard_stats",
 					"get_students",
+					"get_active_sessions",
+					"get_session",
+					"validate_session",
 					"list_devices",
 					"get_device",
 					"get_usage_stats",
-					"get_active_sessions",
 					"get_security_events"
 				]
 			},
@@ -64,6 +73,7 @@
 		"write": {
 			"ubus": {
 				"college.wifi": [
+					"logout_student",
 					"block_device",
 					"unblock_device"
 				]
@@ -72,13 +82,21 @@
 	},
 
 	"luci-app-college-wifi-student": {
-		"description": "Student portal access — personal data only",
+		"description": "Student portal access — authentication and personal data only",
 		"read": {
 			"ubus": {
 				"college.wifi": [
 					"get_my_quota",
 					"get_my_usage",
 					"get_my_devices"
+				]
+			}
+		},
+		"write": {
+			"ubus": {
+				"college.wifi": [
+					"authenticate_student",
+					"logout_student"
 				]
 			}
 		}

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  College WiFi Captive Portal
+  ===========================
+  This page is served by uhttpd on the OpenWrt router (port 2080).
+  It is the student-facing FAS splash page, entirely separate from
+  the LuCI administrator interface.
+
+  Flow:
+    1. openNDS intercepts client HTTP request, redirects here with
+       ?fas=<b64-encoded-params> containing clientip, clientmac,
+       gatewayname, client_hid, gatewayaddress, authdir, originurl.
+    2. This page prompts for College ID + phone number.
+    3. On submit the form POSTs to /cw-auth/authenticate (handled by
+       fas-handler.sh which calls the college.wifi ubus RPC).
+    4. On success, fas-handler.sh calls the openNDS auth URL and
+       redirects back here with ?status=authenticated.
+    5. On failure it redirects here with ?status=error&msg=<reason>.
+
+  IMPORTANT: This page intentionally does NOT use external CDN
+  resources. openNDS CPD browsers often block external file loads.
+  All styles and scripts are inline.
+-->
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>College WiFi — Connect</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   Arial, sans-serif;
+      font-size: 15px;
+      background: linear-gradient(135deg, #1a2332 0%, #2c3e50 100%);
+      color: #333;
+    }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    .portal-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      width: 100%;
+      max-width: 420px;
+      overflow: hidden;
+    }
+
+    /* ── Card header ──────────────────────────────────────── */
+    .card-header {
+      background: linear-gradient(135deg, #1a2332 0%, #2196F3 100%);
+      padding: 28px 28px 22px;
+      text-align: center;
+      color: #fff;
+    }
+    .college-logo {
+      width: 60px; height: 60px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      margin: 0 auto 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .card-header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+    .card-header p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.75);
+      margin-top: 4px;
+    }
+
+    /* ── Card body ────────────────────────────────────────── */
+    .card-body { padding: 28px; }
+
+    /* ── Form elements ────────────────────────────────────── */
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #6b7a99;
+      margin-bottom: 7px;
+    }
+    .form-input {
+      width: 100%;
+      border: 1.5px solid #dde2ea;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      background: #fafbfc;
+    }
+    .form-input:focus {
+      border-color: #2196F3;
+      box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.15);
+      background: #fff;
+    }
+    .form-input::placeholder { color: #b0bcc8; }
+
+    .form-hint {
+      font-size: 11px;
+      color: #9aabbb;
+      margin-top: 5px;
+    }
+
+    /* ── Submit button ────────────────────────────────────── */
+    .btn-connect {
+      width: 100%;
+      background: linear-gradient(135deg, #2196F3, #1565C0);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      margin-top: 4px;
+    }
+    .btn-connect:hover  { opacity: 0.92; }
+    .btn-connect:active { transform: scale(0.99); }
+    .btn-connect:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Alerts ───────────────────────────────────────────── */
+    .alert {
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 13px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+    .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .alert-error   { background: #ffebee; border: 1px solid #ef9a9a; color: #c62828; }
+    .alert-success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #1b5e20; }
+    .alert-info    { background: #e3f2fd; border: 1px solid #90caf9; color: #0d47a1; }
+    .alert-warning { background: #fff8e1; border: 1px solid #ffe082; color: #6d4c00; }
+
+    /* ── Post-auth status card ────────────────────────────── */
+    .status-panel { display: none; }
+    .status-panel.visible { display: block; }
+    .status-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .status-icon {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 10px;
+    }
+    .status-header h2 { font-size: 20px; font-weight: 800; }
+    .status-header p  { font-size: 13px; color: #6b7a99; margin-top: 4px; }
+
+    .quota-bar-wrap {
+      background: #eee;
+      border-radius: 10px;
+      height: 10px;
+      overflow: hidden;
+      margin: 10px 0 5px;
+    }
+    .quota-bar {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.6s;
+    }
+    .quota-bar.ok     { background: #4CAF50; }
+    .quota-bar.warn   { background: #FF9800; }
+    .quota-bar.danger { background: #F44336; }
+
+    .quota-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 14px;
+    }
+    .quota-table td {
+      padding: 9px 0;
+      border-top: 1px solid #f0f2f5;
+    }
+    .quota-table td:last-child { text-align: right; font-weight: 700; }
+
+    .btn-logout {
+      width: 100%;
+      background: transparent;
+      border: 1.5px solid #dde2ea;
+      color: #6b7a99;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: all 0.15s;
+    }
+    .btn-logout:hover { background: #f5f7fa; color: #333; }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    .card-footer {
+      padding: 14px 28px 20px;
+      border-top: 1px solid #f0f2f5;
+      text-align: center;
+    }
+    .card-footer p {
+      font-size: 12px;
+      color: #9aabbb;
+      line-height: 1.7;
+    }
+    .card-footer a { color: #2196F3; text-decoration: none; }
+
+    /* ── Loading spinner ──────────────────────────────────── */
+    .spinner {
+      display: none;
+      width: 20px; height: 20px;
+      border: 3px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-connect.loading .btn-text { display: none; }
+    .btn-connect.loading .spinner  { display: block; }
+
+    /* ── Demo banner ──────────────────────────────────────── */
+    .demo-notice {
+      font-size: 11px;
+      text-align: center;
+      color: rgba(255,255,255,0.45);
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="portal-wrap">
+  <div class="card">
+
+    <!-- ── Header ─────────────────────────────────────────── -->
+    <div class="card-header">
+      <div class="college-logo">🎓</div>
+      <h1>College WiFi</h1>
+      <p>Secure student internet access</p>
+    </div>
+
+    <!-- ── Body ───────────────────────────────────────────── -->
+    <div class="card-body">
+
+      <!-- Dynamic alert (error / info messages) -->
+      <div id="alert-box" class="alert alert-error" style="display:none;">
+        <span class="alert-icon" id="alert-icon">⚠</span>
+        <span id="alert-text"></span>
+      </div>
+
+      <!-- ── LOGIN FORM (default view) ──────────────────── -->
+      <div id="login-panel">
+
+        <div class="alert alert-info" style="margin-bottom: 18px;">
+          <span class="alert-icon">ℹ</span>
+          <span>Enter your <strong>College ID</strong> and <strong>registered phone number</strong> to connect.</span>
+        </div>
+
+        <form id="login-form" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="college-id">College ID</label>
+            <input
+              class="form-input"
+              type="text"
+              id="college-id"
+              name="college_id"
+              placeholder="e.g. ENG23CS001"
+              autocomplete="off"
+              autocapitalize="characters"
+              maxlength="20"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="phone">Registered Phone Number</label>
+            <input
+              class="form-input"
+              type="tel"
+              id="phone"
+              name="phone"
+              placeholder="10-digit mobile number"
+              autocomplete="off"
+              inputmode="numeric"
+              maxlength="10"
+              required
+            />
+            <div class="form-hint">Your phone number is never stored in plain text.</div>
+          </div>
+
+          <button type="submit" class="btn-connect" id="connect-btn">
+            <span class="btn-text">Connect to Internet</span>
+            <div class="spinner"></div>
+          </button>
+        </form>
+
+      </div><!-- /login-panel -->
+
+      <!-- ── POST-AUTH STATUS PANEL ─────────────────────── -->
+      <div id="status-panel" class="status-panel">
+
+        <div class="status-header">
+          <span class="status-icon" id="status-icon">✅</span>
+          <h2 id="status-title">Connected</h2>
+          <p id="status-subtitle">Your session is active</p>
+        </div>
+
+        <div class="alert alert-warning" id="demo-data-notice" style="display:none;">
+          <span class="alert-icon">⚠</span>
+          <span>
+            <strong>Demo Mode:</strong> Usage values shown below are illustrative.
+            Real traffic tracking will be active in Phase 5.
+          </span>
+        </div>
+
+        <!-- Quota progress bar -->
+        <div>
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:#6b7a99; margin-bottom:4px;">
+            <span>Data Used</span>
+            <span id="quota-pct">0%</span>
+          </div>
+          <div class="quota-bar-wrap">
+            <div class="quota-bar ok" id="quota-bar" style="width:0%"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#9aabbb; margin-top:3px;">
+            <span id="quota-used-label">0 MB used</span>
+            <span id="quota-total-label">1 GB quota</span>
+          </div>
+        </div>
+
+        <!-- Quota details table -->
+        <table class="quota-table">
+          <tr>
+            <td style="color:#6b7a99;">Student</td>
+            <td id="st-name">—</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7a99;">College ID</td>
+            <td id="st-cid">—</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7a99;">Data Quota</td>
+            <td id="st-quota">—</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7a99;">Data Used</td>
+            <td id="st-used">—</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7a99;">Remaining</td>
+            <td id="st-remaining" style="color:#4CAF50;">—</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7a99;">Status</td>
+            <td id="st-status">—</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7a99;">Session Expires</td>
+            <td id="st-expires">—</td>
+          </tr>
+        </table>
+
+        <button class="btn-logout" id="logout-btn" onclick="handleLogout()">
+          Disconnect
+        </button>
+
+      </div><!-- /status-panel -->
+
+    </div><!-- /card-body -->
+
+    <!-- ── Footer ─────────────────────────────────────────── -->
+    <div class="card-footer">
+      <p>
+        Limited internet access is provided to authenticated students only.<br/>
+        For support, contact the Network Administrator.
+      </p>
+    </div>
+
+  </div><!-- /card -->
+
+  <div class="demo-notice">
+    ⚠ Demo environment — not connected to physical network hardware
+  </div>
+</div><!-- /portal-wrap -->
+
+<script>
+/*
+ * Portal client-side logic
+ * ========================
+ * Communicates with the backend via the /cw-auth/ endpoint which is
+ * handled by fas-handler.sh on the OpenWrt router. That script in turn
+ * calls the college.wifi ubus RPC methods.
+ *
+ * In demo mode (no OpenWrt), requests are handled locally using
+ * the DEMO_DB below — clearly labelled.
+ */
+
+/* ── Demo data (mirrors students.json seed) ───────────────────── */
+const DEMO_DB = {
+  'ENG23CS001': { name:'Arun Kumar',    phone_hash:'sha256-proto:9876543210', quota:1073741824, used:591396864, status:'active'  },
+  'ENG23CS002': { name:'Priya Singh',   phone_hash:'sha256-proto:9123456780', quota:1073741824, used:407896064, status:'active'  },
+  'ENG23CS003': { name:'Rahul Dev',     phone_hash:'sha256-proto:9988776655', quota:1073741824, used:987758592, status:'active'  },
+  'ENG23CS004': { name:'Sneha Nair',    phone_hash:'sha256-proto:8765432109', quota:1073741824, used:220200960, status:'active'  },
+  'ENG23CS005': { name:'Vikram Rajan',  phone_hash:'sha256-proto:7654321098', quota:1073741824, used:92274688,  status:'active'  },
+  'ENG23CS007': { name:'Anita Sharma',  phone_hash:'sha256-proto:8123456789', quota:1073741824, used:912261120, status:'active'  },
+  'ENG23CS008': { name:'Vikram Bose',   phone_hash:'sha256-proto:7890123456', quota:1073741824, used:1073741824,status:'blocked' },
+  'ENG23CS009': { name:'Deepak Pillai', phone_hash:'sha256-proto:9345678901', quota:1073741824, used:125829120, status:'active'  },
+};
+
+/* Demo failed attempts tracker */
+const FAILED = {};
+const MAX_FAIL = 5, LOCKOUT_SECS = 900;
+let sessionData = null;
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+function fmtBytes(b) {
+  b = b || 0;
+  if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+  if (b >= 1048576)    return (b / 1048576).toFixed(0)    + ' MB';
+  if (b >= 1024)       return (b / 1024).toFixed(0)       + ' KB';
+  return b + ' B';
+}
+function hashPhone(p) { return 'sha256-proto:' + (p || '').replace(/\s/g, ''); }
+function showAlert(msg, type, icon) {
+  const box  = document.getElementById('alert-box');
+  const text = document.getElementById('alert-text');
+  const ico  = document.getElementById('alert-icon');
+  text.innerHTML = msg;
+  ico.textContent = icon || '⚠';
+  box.className = 'alert alert-' + (type || 'error');
+  box.style.display = 'flex';
+}
+function hideAlert() { document.getElementById('alert-box').style.display = 'none'; }
+function setLoading(on) {
+  const btn = document.getElementById('connect-btn');
+  if (on) btn.classList.add('loading'), btn.disabled = true;
+  else    btn.classList.remove('loading'), btn.disabled = false;
+}
+
+/* ── Demo-mode authentication ────────────────────────────────── */
+function demoAuthenticate(cid, phone) {
+  const student = DEMO_DB[cid];
+
+  /* Rate limit check */
+  const rec = FAILED[cid];
+  if (rec && rec.count >= MAX_FAIL) {
+    const age = (Date.now()/1000) - rec.first;
+    if (age < LOCKOUT_SECS)
+      return { success:false, error:`Too many failed attempts. Try again in ${Math.ceil((LOCKOUT_SECS-age)/60)} min.` };
+    delete FAILED[cid];
+  }
+
+  /* Invalid credentials */
+  if (!student || hashPhone(phone) !== student.phone_hash) {
+    if (!FAILED[cid]) FAILED[cid] = { count:1, first:Date.now()/1000 };
+    else              FAILED[cid].count++;
+    return { success:false, error:'Invalid College ID or phone number.' };
+  }
+
+  /* Blocked */
+  if (student.status === 'blocked')
+    return { success:false, error:'Your account has been suspended. Contact the administrator.' };
+
+  /* Clear failures */
+  delete FAILED[cid];
+
+  const remaining = Math.max(0, student.quota - student.used);
+  const sessId = 'demo-sess-' + Date.now();
+
+  return {
+    success:         true,
+    session_id:      sessId,
+    college_id:      cid,
+    name:            student.name,
+    status:          remaining <= 0 ? 'quota_exhausted' : 'authenticated',
+    quota_bytes:     student.quota,
+    used_bytes:      student.used,
+    remaining_bytes: remaining,
+    quota_exhausted: remaining <= 0,
+    expires_at:      Math.floor(Date.now()/1000) + 86400,
+    _demo:           true
+  };
+}
+
+/* ── Detect whether we're running in OpenWrt or demo browser ──── */
+function isOpenWrt() {
+  /* In real deployment the page is served from 192.168.1.1:2080 */
+  return location.hostname === '192.168.1.1' || location.hostname === '10.0.0.1';
+}
+
+/* ── Login handler ───────────────────────────────────────────── */
+async function handleLogin(e) {
+  e.preventDefault();
+  hideAlert();
+
+  const cid   = document.getElementById('college-id').value.trim().toUpperCase();
+  const phone = document.getElementById('phone').value.trim();
+
+  /* Client-side pre-validation (server always re-validates) */
+  if (cid.length < 5)    { showAlert('Please enter a valid College ID.', 'error', '⚠'); return; }
+  if (!/^[6-9][0-9]{9}$/.test(phone)) {
+    showAlert('Please enter a valid 10-digit mobile number starting with 6–9.', 'error', '⚠'); return;
+  }
+
+  setLoading(true);
+
+  let result;
+
+  if (isOpenWrt()) {
+    /* ── Real mode: POST to fas-handler ───────────────────── */
+    try {
+      const params = new URLSearchParams(location.search);
+      const body = new URLSearchParams({
+        college_id: cid,
+        phone:      phone,
+        fas:        params.get('fas') || '',
+        iv:         params.get('iv')  || ''
+      });
+      const resp = await fetch('/cw-auth/authenticate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString()
+      });
+      result = await resp.json();
+    } catch (err) {
+      setLoading(false);
+      showAlert('Connection error. Please try again.', 'error', '🔌'); return;
+    }
+  } else {
+    /* ── Demo mode: run locally ──────────────────────────── */
+    await new Promise(r => setTimeout(r, 700));  /* simulate network delay */
+    result = demoAuthenticate(cid, phone);
+  }
+
+  setLoading(false);
+
+  if (!result.success) {
+    showAlert(result.error || 'Authentication failed.', 'error', '🚫');
+    return;
+  }
+
+  /* Successful auth */
+  sessionData = result;
+  showStatusPanel(result);
+}
+
+/* ── Render post-auth status ─────────────────────────────────── */
+function showStatusPanel(data) {
+  document.getElementById('login-panel').style.display = 'none';
+  const panel = document.getElementById('status-panel');
+  panel.classList.add('visible');
+
+  const pct    = data.quota_bytes > 0
+    ? Math.min(100, Math.round((data.used_bytes / data.quota_bytes) * 100)) : 0;
+  const barEl  = document.getElementById('quota-bar');
+  barEl.style.width = pct + '%';
+  barEl.className   = 'quota-bar ' + (pct >= 100 ? 'danger' : pct >= 75 ? 'warn' : 'ok');
+
+  document.getElementById('quota-pct').textContent          = pct + '%';
+  document.getElementById('quota-used-label').textContent   = fmtBytes(data.used_bytes) + ' used';
+  document.getElementById('quota-total-label').textContent  = fmtBytes(data.quota_bytes) + ' quota';
+  document.getElementById('st-name').textContent      = data.name     || '—';
+  document.getElementById('st-cid').textContent       = data.college_id;
+  document.getElementById('st-quota').textContent     = fmtBytes(data.quota_bytes);
+  document.getElementById('st-used').textContent      = fmtBytes(data.used_bytes);
+  document.getElementById('st-remaining').textContent = fmtBytes(data.remaining_bytes);
+  document.getElementById('st-status').textContent    = data.quota_exhausted
+    ? '⛔ Quota Exhausted' : '✅ Connected';
+  document.getElementById('st-status').style.color   = data.quota_exhausted ? '#F44336' : '#4CAF50';
+
+  const expiry = data.expires_at
+    ? new Date(data.expires_at * 1000).toLocaleString() : '—';
+  document.getElementById('st-expires').textContent = expiry;
+
+  /* Show demo notice when not on real device */
+  if (data._demo) {
+    document.getElementById('demo-data-notice').style.display = 'flex';
+    document.getElementById('status-icon').textContent = data.quota_exhausted ? '⛔' : '✅';
+    document.getElementById('status-title').textContent = data.quota_exhausted
+      ? 'Quota Exhausted' : 'Connected';
+    document.getElementById('status-subtitle').textContent = data.quota_exhausted
+      ? 'You have used all your allocated data. Contact admin to reset.'
+      : 'Welcome, ' + data.name + '. Your session is active.';
+  } else {
+    document.getElementById('status-icon').textContent = data.quota_exhausted ? '⛔' : '✅';
+    document.getElementById('status-title').textContent = data.quota_exhausted
+      ? 'Quota Exhausted' : 'Connected';
+    document.getElementById('status-subtitle').textContent = 'Welcome, ' + data.name;
+  }
+}
+
+/* ── Logout handler ──────────────────────────────────────────── */
+async function handleLogout() {
+  if (!sessionData) return;
+
+  if (isOpenWrt() && sessionData.session_id) {
+    await fetch('/cw-auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ session_id: sessionData.session_id })
+    }).catch(() => {});
+  }
+
+  sessionData = null;
+  document.getElementById('status-panel').classList.remove('visible');
+  document.getElementById('login-panel').style.display = 'block';
+  document.getElementById('college-id').value = '';
+  document.getElementById('phone').value = '';
+  hideAlert();
+  showAlert('You have been disconnected.', 'info', 'ℹ');
+}
+
+/* ── Auto-detect existing session on page load ───────────────── */
+(function() {
+  const params = new URLSearchParams(location.search);
+  const status = params.get('status');
+  const msg    = params.get('msg');
+
+  if (status === 'error' && msg) {
+    showAlert(decodeURIComponent(msg), 'error', '🚫');
+  }
+  if (status === 'authenticated') {
+    /* FAS handler redirected here after successful auth */
+    showAlert('Successfully connected to College WiFi!', 'success', '✅');
+  }
+  if (status === 'already_authenticated') {
+    showAlert('You are already connected to College WiFi.', 'info', 'ℹ');
+  }
+})();
+</script>
+</body>
+</html>

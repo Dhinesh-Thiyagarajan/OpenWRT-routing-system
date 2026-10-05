@@ -41,6 +41,15 @@
 		}
 	},
 
+	"admin/college-wifi/sessions": {
+		"title": "Sessions",
+		"order": 25,
+		"action": {
+			"type": "view",
+			"path": "college-wifi/sessions"
+		}
+	},
+
 	"admin/college-wifi/devices": {
 		"title": "Devices",
 		"order": 30,

@@ -1,0 +1,73 @@
+[
+  {
+    "session_id": "sess-1726560000-001001",
+    "college_id": "ENG23CS001",
+    "internal_id": "cw-student-0001",
+    "client_ip": "192.168.1.101",
+    "client_mac": "a4:c3:f0:12:34:56",
+    "nds_token": "nds-demo-token-001",
+    "login_time": "2026-09-17T10:30:00Z",
+    "last_activity": "2026-09-17T11:00:00Z",
+    "expires_at": 9999999999,
+    "status": "active",
+    "upload_bytes": 10485760,
+    "download_bytes": 157286400
+  },
+  {
+    "session_id": "sess-1726558800-002001",
+    "college_id": "ENG23CS002",
+    "internal_id": "cw-student-0002",
+    "client_ip": "192.168.1.107",
+    "client_mac": "b8:d0:74:ab:cd:ef",
+    "nds_token": "nds-demo-token-002",
+    "login_time": "2026-09-17T10:25:00Z",
+    "last_activity": "2026-09-17T10:55:00Z",
+    "expires_at": 9999999999,
+    "status": "active",
+    "upload_bytes": 5242880,
+    "download_bytes": 94371840
+  },
+  {
+    "session_id": "sess-1726557600-003001",
+    "college_id": "ENG23CS004",
+    "internal_id": "cw-student-0004",
+    "client_ip": "192.168.1.122",
+    "client_mac": "d2:bc:a1:77:88:99",
+    "nds_token": "nds-demo-token-004",
+    "login_time": "2026-09-17T09:15:00Z",
+    "last_activity": "2026-09-17T10:45:00Z",
+    "expires_at": 9999999999,
+    "status": "active",
+    "upload_bytes": 3145728,
+    "download_bytes": 52428800
+  },
+  {
+    "session_id": "sess-1726556400-008001",
+    "college_id": "ENG23CS008",
+    "internal_id": "cw-student-0008",
+    "client_ip": "192.168.1.131",
+    "client_mac": "aa:bb:cc:dd:ee:08",
+    "nds_token": "nds-demo-token-008",
+    "login_time": "2026-09-17T08:00:00Z",
+    "last_activity": "2026-09-17T10:02:00Z",
+    "expires_at": 9999999999,
+    "status": "blocked",
+    "upload_bytes": 52428800,
+    "download_bytes": 1019215872
+  },
+  {
+    "session_id": "sess-1726554000-006001",
+    "college_id": "ENG23CS006",
+    "internal_id": "cw-student-0006",
+    "client_ip": "192.168.1.140",
+    "client_mac": "",
+    "nds_token": "",
+    "login_time": "2026-09-16T14:00:00Z",
+    "last_activity": "2026-09-16T18:30:00Z",
+    "expires_at": 1726599600,
+    "logout_at": "2026-09-16T18:31:00Z",
+    "status": "logged_out",
+    "upload_bytes": 2097152,
+    "download_bytes": 31457280
+  }
+]
