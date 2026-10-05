@@ -19,7 +19,7 @@
 'use strict';
 
 import { cursor }                           from 'uci';
-import { readfile, writefile, stat, time }  from 'fs';
+import { readfile, writefile, stat }          from 'fs';
 
 /* ============================================================
    CONSTANTS
@@ -610,8 +610,8 @@ const methods = {
 		},
 		call: function(req) {
 			/* 1. Validate input format */
-			const cid = trim(req.college_id || '');
-			const phone = replace(trim(req.phone || ''), /\s/g, '');
+			const cid = trim(req.args.college_id || '');
+			const phone = replace(trim(req.args.phone || ''), /\s/g, '');
 
 			let ve = validateCollegeId(cid);
 			if (ve) return { success: false, error: ve };
@@ -619,9 +619,9 @@ const methods = {
 			ve = validatePhone(phone);
 			if (ve) return { success: false, error: ve };
 
-			const clientIp  = trim(req.client_ip  || '');
-			const clientMac = lc(trim(req.client_mac || ''));
-			const ndsToken  = trim(req.nds_token  || '');
+			const clientIp  = trim(req.args.client_ip  || '');
+			const clientMac = lc(trim(req.args.client_mac || ''));
+			const ndsToken  = trim(req.args.nds_token  || '');
 
 			/* 2. Rate-limit check */
 			const limitErr = checkRateLimit(cid);

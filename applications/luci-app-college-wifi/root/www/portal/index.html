@@ -12,11 +12,15 @@
        ?fas=<b64-encoded-params> containing clientip, clientmac,
        gatewayname, client_hid, gatewayaddress, authdir, originurl.
     2. This page prompts for College ID + phone number.
-    3. On submit the form POSTs to /cw-auth/authenticate (handled by
-       fas-handler.sh which calls the college.wifi ubus RPC).
-    4. On success, fas-handler.sh calls the openNDS auth URL and
-       redirects back here with ?status=authenticated.
-    5. On failure it redirects here with ?status=error&msg=<reason>.
+    3. On submit the form POSTs to /cw-auth/portal.sh/authenticate (PATH_INFO=/authenticate,
+       handled by fas-handler.sh which calls the college.wifi ubus RPC).
+    4. fas-handler.sh calls openNDS (ndsctl auth + FAS URL) then returns
+       HTTP 200 JSON: { success, name, college_id, quota_bytes, used_bytes,
+       remaining_bytes, quota_exhausted, expires_at, session_id }.
+       The portal's fetch().json() reads this and renders the status panel.
+    5. On failure the handler returns HTTP 200 JSON { success:false, error }.
+    6. Logout POSTs to /cw-auth/portal.sh/logout (PATH_INFO=/logout) and
+       receives HTTP 200 JSON { success:true }.
 
   IMPORTANT: This page intentionally does NOT use external CDN
   resources. openNDS CPD browsers often block external file loads.
@@ -400,9 +404,23 @@
 
   </div><!-- /card -->
 
-  <div class="demo-notice">
+  <div class="demo-notice" id="demo-notice-bar">
     ⚠ Demo environment — not connected to physical network hardware
   </div>
+
+<script>
+/* Hide the demo-notice bar when running on a real OpenWrt gateway */
+(function() {
+  var bar = document.getElementById('demo-notice-bar');
+  if (bar) {
+    /* Inline the same isOpenWrt() logic — function not yet defined here */
+    var hasFas  = location.search.indexOf('fas=') !== -1;
+    var gws     = ['192.168.100.1', '192.168.1.1', '10.0.0.1'];
+    var knownGw = gws.indexOf(location.hostname) !== -1;
+    if (hasFas || knownGw) bar.style.display = 'none';
+  }
+})();
+</script>
 </div><!-- /portal-wrap -->
 
 <script>
@@ -506,8 +524,35 @@ function demoAuthenticate(cid, phone) {
 
 /* ── Detect whether we're running in OpenWrt or demo browser ──── */
 function isOpenWrt() {
-  /* In real deployment the page is served from 192.168.1.1:2080 */
-  return location.hostname === '192.168.1.1' || location.hostname === '10.0.0.1';
+  /*
+   * A request is treated as real OpenWrt when ANY of these is true:
+   *
+   * 1. The URL contains ?fas= (openNDS always appends this when
+   *    redirecting to the FAS splash page).
+   *
+   * 2. The hostname matches a known gateway address.  We list the
+   *    ones used in our deployment but keep the fas= check as the
+   *    primary signal so this list never needs to be exhaustive.
+   *
+   * Demo mode is only active when neither condition is met — i.e.
+   * when the page is opened directly from localhost / 127.0.0.1 /
+   * a file:// URL during development.
+   */
+  var knownGateways = [
+    '192.168.100.1',  /* our OpenWrt VM (primary) */
+    '192.168.1.1',    /* default OpenWrt LAN IP   */
+    '10.0.0.1'        /* alternate common gateway */
+  ];
+
+  /* Primary signal: openNDS FAS redirect always carries ?fas= */
+  if (location.search.indexOf('fas=') !== -1) return true;
+
+  /* Secondary signal: hostname matches a known gateway */
+  for (var i = 0; i < knownGateways.length; i++) {
+    if (location.hostname === knownGateways[i]) return true;
+  }
+
+  return false;
 }
 
 /* ── Login handler ───────────────────────────────────────────── */
@@ -538,7 +583,7 @@ async function handleLogin(e) {
         fas:        params.get('fas') || '',
         iv:         params.get('iv')  || ''
       });
-      const resp = await fetch('/cw-auth/authenticate', {
+      const resp = await fetch('/cw-auth/portal.sh/authenticate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body.toString()
@@ -616,7 +661,7 @@ async function handleLogout() {
   if (!sessionData) return;
 
   if (isOpenWrt() && sessionData.session_id) {
-    await fetch('/cw-auth/logout', {
+    await fetch('/cw-auth/portal.sh/logout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ session_id: sessionData.session_id })
